@@ -9,14 +9,14 @@ import React, {Component} from "react";
 import Clarifai from 'clarifai';
 
 const app = new Clarifai.App({
-    apiKey: 'process.env.API_KEY'
+    // apiKey: 'process.env.API_KEY'
+    apiKey: 'f109e64b5ba44643aecd29bf6756f004'
 });
-
 
 const particlesOptions = {
     particles: {
         number: {
-            value: 80,
+            value: 100,
             density: {
                 enable: true,
                 value_area: 800
@@ -37,10 +37,27 @@ class App extends Component {
         super();
         this.state = {
             input: '',
-            imageUrl: ''
+            imageUrl: '',
+            box: {}
         }
     }
 
+    calculateFaceLocation = (data) => {
+        const clarifaiFace = data.outputs[0].data.regions[0].region_info.bounding_box;
+        const image = document.getElementById('inputimage');
+        const width = Number(image.width);
+        const height = Number(image.height);
+        return {
+            leftcol: clarifaiFace.left_col * width,
+            topRow: clarifaiFace.top_row * height,
+            rightcol: width - (clarifaiFace.right_col * width),
+            bottomRow: height - (clarifaiFace.bottom_row * height)
+        }
+    }
+
+    displayFaceBox = (box) => {
+        this.setState({box: box});
+    }
 
     onInputChange = (event) => {
         this.setState({input: event.target.value});
@@ -62,21 +79,20 @@ class App extends Component {
                 Clarifai.FACE_DETECT_MODEL,
                 this.state.input)
             .then(response => {
-                console.log('response: ', response.outputs[0].data.regions[0].region_info.bounding_box)
-                if (response) {
-                    fetch('http://localhost:3000/image', {
-                        method: 'put',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({
-                            id: this.state.user.id
-                        })
-                    })
-                        .then(response => response.json())
-                        .then(count => {
-                            this.setState(Object.assign(this.state.user, {entries: count}))
-                        })
-
-                }
+                // if (response) {
+                //     fetch('http://localhost:3000/image', {
+                //         method: 'put',
+                //         headers: {'Content-Type': 'application/json'},
+                //         body: JSON.stringify({
+                //             id: this.state.user.id
+                //         })
+                //     })
+                //         .then(response => response.json())
+                //         .then(count => {
+                //             this.setState(Object.assign(this.state.user, {entries: count}))
+                //         })
+                //
+                // }
                 this.displayFaceBox(this.calculateFaceLocation(response))
             })
             .catch(err => console.log(err));
@@ -94,7 +110,7 @@ class App extends Component {
                 <Logo/>
                 <Rank/>
                 <ImageLinkForm onInputChange={this.onInputChange} onButtonSubmit={this.onButtonSubmit}/>
-                <FaceRecognition imageUrl={this.state.imageUrl} />
+                <FaceRecognition box={this.state.box} imageUrl={this.state.imageUrl}/>
             </div>
         );
     }
